@@ -1,0 +1,203 @@
+<DOCTYPE html>
+<html>
+	<head>
+		<title>FXChange - A Forex Game by Zofia Kreasi</title>
+		<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+		<script src="zkCharts.js"></script>
+		<style>
+			body{
+				font-family: arial;
+				margin-bottom: 100px;
+				background-color: black;
+				color: lime;
+			}
+			.floatingTB{
+				color: black;
+				text-align: center;
+				position: fixed;
+				top: 0;
+				left: 0;
+				margin: 15px;
+				z-index: 50;
+				background-color: rgba(255, 255, 255, 0.8);
+				border-radius: 15px;
+				padding: 15px;
+				-webkit-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+				-moz-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+				box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.25);
+			}
+			.buttonSell{
+				width: 30px;
+				background-color: #c11600;
+				color: white;
+				font-size: 14px;
+				display: inline-block;
+				padding: 10px;
+				text-align: center;
+				margin: 2px;
+				margin-top: 5px;
+				border-radius: 5px;
+			}
+			.buttonBuy{
+				width: 30px;
+				background-color: #0e5acc;
+				color: white;
+				font-size: 14px;
+				display: inline-block;
+				padding: 10px;
+				text-align: center;
+				margin: 2px;
+				margin-top: 5px;
+				border-radius: 5px;
+			}
+			#openTrades{
+				display: block;
+				border: 1px solid lime;
+				padding: 10px;
+			}
+			#openTrades p{
+				padding-bottom: 35px;
+				padding-top: 25px;
+				border-bottom: 1px solid lime;
+				font-size: 18px;
+			}
+			.downbutton{
+				position: fixed;
+				right: 0;
+				bottom: 0;
+				padding: 5px;
+			}
+			#pleaseWait{
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				color: white;
+				font-size: 40px;
+			}
+		</style>
+	</head>
+	<body>	
+		<p id="gbpusd"></p>
+		<div class="floatingTB">
+			<h3 id="traderMoney">$0</h3>
+			<!--<p>Order Lots:
+			<select>
+				<option>0.10</option>
+				<option>0.20</option>
+				<option>0.30</option>
+				<option>0.40</option>
+				<option>0.50</option>
+			</select>
+			</p>-->
+			<div class="buttonSell" onclick="sell()">Sell</div>
+			<div class="buttonBuy" onclick="buy()">Buy</div>
+		</div>
+		<div id="fxChart" style = "width=100%; border: 1px solid lime;"></div>
+		
+		<script>
+			var screenH = window.innerHeight;
+			var screenW = window.innerWidth;
+			screenH -= 80;
+			document.getElementById("fxChart").style.height = screenH + "px";
+			var traderMoney = 0;
+			if(localStorage.getItem("traderMoney") === null){
+				localStorage.setItem("traderMoney", "1000.00");
+				traderMoney = 1000.00;
+			} else traderMoney = parseInt(localStorage.getItem("traderMoney"));
+			
+			var fxPrice = 1.29490;
+			var randomNumber;
+			var seconds = 1;
+			
+			var chart1 = new zkCharts("fxChart", screenH, 5);
+			chart1.initialize();
+			var chartData = [];
+			chartData.push({"y" : fxPrice});
+			
+			setInterval(function(){
+				refresh();
+			}, 1987);
+			
+			function refresh(){
+				document.getElementById("pleaseWait").style.display = "none";
+				randomNumber = Math.floor(Math.random() * 13); 
+				randomNumber /= 100000;
+				var randomFivty = Math.random();
+				if(randomFivty > 0.5) fxPrice += randomNumber;
+				else fxPrice -= randomNumber;
+				seconds += 1;
+				
+				chartData.push({"y" : fxPrice});
+				if(chartData.length > 313) chartData.splice(0, 1);
+				chart1.drawForexLineChart(chartData, 0, 5);
+				
+				//refresh trade list
+				if(myTrades.length > 0){
+					var tradeListText = "";
+					var totalPL = 0;
+					for(var i = 0; i < myTrades.length; i++){
+						var xTradeType = myTrades[i].type;
+						var xTradePrice = myTrades[i].price;
+						var pl, plSpan;
+						var display = "block";
+						if(xTradeType == "buy") pl = fxPrice - xTradePrice;
+						else if(xTradeType == "sell") pl = xTradePrice - fxPrice
+						else if(xTradeType == "closed"){
+							pl = 0;
+							display = "none";
+						}
+						if(pl < 0) plSpan = "<span style='color: red'>";
+						else plSpan = "<span style='color: lime'>";
+						pl *= 100000;
+						totalPL += pl;
+						var orderNumber = i+1;
+						tradeListText += "<p id=orderNumber"+i+" style='display: "+display+"'>#"+orderNumber+" Order type: "+myTrades[i].type+" at price: "+myTrades[i].price.toFixed(5)+" P/L: "+plSpan+"$"+pl.toFixed(2)+"</span> <span onclick='closeTrade("+i+")' style='float: right;'><img src='close.png' /></span></p>";
+					}
+					document.getElementById("openTrades").innerHTML = tradeListText;
+					if(totalPL != 0){
+						var newTraderMoney = traderMoney + totalPL;
+						localStorage.setItem("traderMoney", newTraderMoney.toString());
+					}else{
+						traderMoney = parseInt(localStorage.getItem("traderMoney"));
+					}
+					document.getElementById("traderMoney").innerHTML = "$" + (traderMoney + totalPL).toFixed(2);
+					document.getElementById("totalPL").innerHTML = "$" + totalPL.toFixed(2);
+				}else{
+					document.getElementById("traderMoney").innerHTML = "$" + traderMoney.toFixed(2);
+				}
+			}
+			
+			function trades(type, price){
+				this.type = type;
+				this.price = price;
+			}
+			
+			var tradeNumber = 0;
+			var myTrades = [];
+			function buy(){
+				myTrades[tradeNumber] = new trades("buy", fxPrice);
+				tradeNumber += 1;
+				document.getElementById("pleaseWait").style.display = "block";
+			}
+			function sell(){
+				myTrades[tradeNumber] = new trades("sell", fxPrice);
+				tradeNumber += 1;
+				document.getElementById("pleaseWait").style.display = "block";
+			}
+			function closeTrade(x){
+				document.getElementById("orderNumber"+x).style.display = "none";
+				myTrades[x].type = "closed";
+			}
+			
+		</script>
+		<h1 id="yourtrades">Your Trades:</h1>
+		<div id="openTrades"></div>
+		<h3 align="right">Total P/L: <span id="totalPL">NA</span></h3>
+		<div class="downbutton"><a href="index.html#yourtrades"><img src="down.png"></a></div>
+		<div id="pleaseWait"><p align="center">Please wait...</p></div>
+		<script>
+			document.getElementById("pleaseWait").style.top = ((innerHeight/2)-100) + "px";
+		</script>
+	</body>
+</html>
